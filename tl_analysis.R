@@ -306,9 +306,9 @@ texts <- sapply(tw, function(x) x$text)
 head(texts)
 
 # Il faut enlever quelques caractères problématiques
-texts <- gsub("\\&gt\\;", "", texts)
-texts <- gsub("\\&lt\\;", "", texts)
-texts <- gsub("\\&amp", "", texts)
+texts <- gsub("\\&gt\\;", ">", texts)
+texts <- gsub("\\&lt\\;", "<", texts)
+texts <- gsub("\\&amp", "&", texts)
 
 # IL NE FAUT PAS PRENDRE LES RTs PARCE QU'ILS SONT RACCOURCIS A 140 CARACTERES !!!
 
@@ -337,7 +337,7 @@ head(char3)
 # Distribution du nombre de caractères
 char3.df <- as.data.frame(table(char3), stringsAsFactors = FALSE)
 char3.df$char3 <- as.numeric(char3.df$char3)
-png("nchar.png")
+
 # On plot les 3 cas dans un même graphe
 pdf("nchar.pdf")
 plot(char.df, pch = 20, col = "blue", xlab="Nombre de caractères", ylab="Nombre de tweets", main = "Nombre de tweets (sans RTs classiques)\nen fonction du nombre de caractères", cex = .6)
