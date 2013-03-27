@@ -518,7 +518,7 @@ dev.off()
 ############################
 
 # Le nombre de tweets par heure et par jour
-jour.heure <- as.matrix(table(wday(crea), hour(crea)))[c(7,1:6),]
+jour.heure <- as.matrix(table(wday(crea), hour(crea)))[c(1,7:2),]
 
 # La palette de couleurs
 pal <- alpha("red", seq(0, .9, length = max(jour.heure)+1))
@@ -563,6 +563,8 @@ dev.off()
 ################################
 ### Écarts entre deux tweets ###
 ################################
+
+# work in progress
 
 # on classe les dates
 crea.temp <- crea[order(crea)]
