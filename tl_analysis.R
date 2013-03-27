@@ -7,7 +7,7 @@
 # on nettoie l'environnement de travail
 rm(list=ls())
 
-# définir ici le
+# définir ici le dossier de travail (il est possible de faire un glisser-déposer)
 wd <- "~/Dropbox/Pegasus/2013_TwitterDataRetrieval"
 
 # on va d'abord charger les tweets là où ils sont
