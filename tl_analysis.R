@@ -17,6 +17,10 @@ setwd(paste(wd, "/tweets/data/js/tweets", sep=""))
 ### chargement des packages ###
 ###############################
 
+# Après avoir exécuté la ligne ci-dessous vous n'en aurez plus jamais besoin
+install.packages(c("rjson", "wordcloud", "tm", "lubridate", "scales"))
+# Alors autant l'effacer :-)
+
 library(rjson)
 library(wordcloud)
 library(tm)
