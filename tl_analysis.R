@@ -1,25 +1,39 @@
 # Titre 		:		tl_analysis.R
-# Auteur		:		Yannick Rochat, (DHLAB) EPFL, (IMA) UNIL
-# Date  		: 		Mars 2013
-# Description 	:		Décrire et analyser les tweets contenus dans son archive
+# Author		:		Yannick Rochat, EPFL\CDH\DHLAB | UNIL\SSP\IMA
+# Date  		: 		2013/04/24
+# Description 	:		This script intends to describe and analyse tweets as received by Twitter's data retrieval own tool
 # License		:		GNU General Public License
 
-# on nettoie l'environnement de travail
+# To evaluate this script line after line :
+# On Mac, bring the cursor on the line you want to evaluate, don't
+# select anything, then press (and keep) the "Apple touch" and press enter
+# If you have selected some text, this will be evaluated instead of
+# the single line.
+
+# Cleaning working space
+
 rm(list=ls())
 
-# définir ici le dossier de travail (il est possible de faire un glisser-déposer)
-wd <- "~/Dropbox/Pegasus/2013_TwitterDataRetrieval"
+# Defining working directory. On mac, "~" is your home folder and
+# "folder1/folder2" means that "folder2" lies into "folder1"
+# DON'T FORGET TO REPLACE MY OWN WORKING DIRECTORY BY YOURS
+# and to copy the Twitter folder "tweets" into it
 
-# on va d'abord charger les tweets là où ils sont
+wd <- "~/Dropbox/Pegasus/2013_03_27_TwitterDataRetrieval"
+
+# Entering your Twitter "tweets" folder
+
 setwd(paste(wd, "/tweets/data/js/tweets", sep=""))
 
-###############################
-### chargement des packages ###
-###############################
 
-# Après avoir exécuté la ligne ci-dessous vous n'en aurez plus jamais besoin
-install.packages(c("rjson", "wordcloud", "tm", "lubridate", "scales"))
-# Alors autant l'effacer :-)
+############################
+### Loading the packages ###
+############################
+
+# If you have never installed one of these packages, please first evaluate
+# the following line without the comment (= "#")
+
+# install.packages(c("rjson", "wordcloud", "tm", "lubridate", "scales"))
 
 library(rjson)
 library(wordcloud)
@@ -27,110 +41,140 @@ library(tm)
 library(lubridate)
 library(scales)
 
-# si le chargement ne fonctionne pas, vous pouvez installer le package via la commande install.packages
-# ici par exemple : install.packages("wordcloud")
 
-#############################
-### Chargement des tweets ###
-#############################
+##########################
+### Loading the tweets ###
+##########################
 
-# lister tous les fichiers .js
+# List all .js files
+
 lf <- list.files()
 
-# lire ces fichiers : ignorer les warnings, qui sont causés par 
-# l'absence d'un retour à la ligne à la fin de chaque document
+# Reading these .js files.
+# Please ignore the warnings, they are caused by the 
+# absence of a line break at the end of each document
+
 tw <- sapply(lf, readLines)
 
-# retirer les noms des fichiers chargés au passage
+# Cleaning names
+
 names(tw) <- NULL
 
-# enlever la première ligne parasite
+# Deleting first "parasite" line
+
 tw <- sapply(tw, function(x) x[-1])
 
-# concaténer en une seule entrée
+# Suppressing line breaks
+
 tw <- sapply(tw, paste, collapse=" ")
 
-# convertir de JSON en une liste dans R
+# Converting from JSON to an R list
+
 tw <- lapply(tw, fromJSON)			
 
-# on supprime la classification par mois pour avoir une liste unique				
+# Suppressing month breaks
+
 tw <- unlist(tw, recursive = FALSE)
 
-# ATTENTION !!!
-# ceci est en tout cas valable sur un mac avec le système 10.6.8 et R 2.15.3
-# si la commande strptime ne fonctionne pas, utiliser la commande suivante
-# pour modifier l'environnement et le rendre compatible avec le format de dates de Twitter :
-# Sys.setlocale("LC_TIME", "C")						
 
 #############
 ### Dates ###
 #############
 
-# extraire les dates
-crea <- sapply(tw, function(x) x$created_at)
+# WATCH OUT !!!
+# At least valid on my Mac OS 10.6.8 with R 2.15.3 :
+# If strptime dosen't work, please use the following command to modify
+# the R environment in order to be compatible with Twitter dates format :
+# Sys.setlocale("LC_TIME", "C")						
 
-# convertir de characters à POSIXt
-crea <- strptime(crea, "%A %b %d %H:%M:%S %z %Y")
+# Extracting dates
 
-# exemple
+crea.temp <- sapply(tw, function(x) x$created_at)
+
+# Converting dates from characters to POSIX
+
+crea <- strptime(crea.temp, "%A %b %d %H:%M:%S %z %Y")
+
+# Example
 # Thu Jan 31 23:27:08 +0000 2013
 # %A  %b  %d %H:%M:%S +%z   %Y
 
-# on retourne bosser dans notre dossier de travail et pas au fond des fichiers contenant les tweets
+# If the next command gives you multiple "NA", please read and follow the previous "WATCH OUT !!!" paragraph
+head(crea)
+
+# Leaving your Twitter "tweets" folder and going back to your original working directory
+# This is were the graphical outputs will be saved
+
 setwd(wd)
 
+
 ##########################
-### ANALYSE ET VISUELS ###
+### Analysis & visuals ###
 ##########################
 
-# Tous les tweets, retweets en meta-données sont chargés dans tw. Aperçu :
+# Preview of tweets and retweets metadata
+
 head(tw)
 
-# Nombre de tweets
+# Total number of tweets
+
 length(tw)
 
-# Nombre de tweets par jour, en prenant la date la plus vieille et la date la plus récente
+# Number of tweets per day computed like that :
+# Number of tweets / (last tweet date - oldest tweet date)
+
 difft <- as.numeric(tail(crea,1) - head(crea,1))				
 length(tw) / difft
+
 
 ################
 ### Retweets ###
 ################
 
-# Nombre de RTs : retourne le tweet si c'est un retweet, et list() si c'est pas le cas
+# Returns empty list or retweet itself
+
 RT <- lapply(tw, function(x) x$retweeted_status)
 
-# TRUE si c'est un RT, FALSE sinon
+# Either TRUE if it is a retweet, or FALSE if it isn't
+
 RT.status <- !sapply(RT, is.null)			
 
-# Un aperçu sur les 1000 premiers tweets
+# Preview of 100 first tweets
+
 head(RT.status,100)
 
-# Le nombre de TRUE's, c'est-à-dire le nombre de retweets
+# Number of TRUE's, i.e. numbre of retweets
+
 sum(RT.status)
 
-# Proportion de RTs
+# Proportion of RTs
+
 sum(RT.status) / length(RT.status)
 
-# Qui je RT
+# Who you retweet
+
 RT.id <- sapply(tw[RT.status], function(x) x$retweeted_status$user$screen_name)
 
-# La fréquence de chaque auteur retweeté
+# Frequency of who you retweet
+
 RT.id.df <- as.data.frame(table(RT.id), stringsAsFactors = FALSE)
 head(RT.id.df, 10)
 
-# On les réordonne pour créer le graphe
+# Frequency of who you retweet, ordered
+
 RT.Freq <- RT.id.df$Freq
 names(RT.Freq) <- RT.id.df$RT.id
 tail(RT.Freq[order(RT.Freq)], 40)
 
-# On représente ici les sites plus cités (sic!)
+# And visualised
+
 pdf("RT_people.pdf", width=1200/72, height=1200/72)
 par(mar=c(5,12,4,2))
 barplot(RT.Freq[tail(order(RT.Freq), 39)], horiz = TRUE, cex.names = 1, las = 2, main = "Noms des utilisateurs retweetés", cex.main = 3, cex.axis = 2)
 abline(v=1:20*10, lty = 3)
 dev.off()
 
+### TO BE TRADUCTED FROM HERE
 
 ################
 ### Mentions ###
@@ -306,9 +350,9 @@ texts <- sapply(tw, function(x) x$text)
 head(texts)
 
 # Il faut enlever quelques caractères problématiques
-texts <- gsub("\\&gt\\;", ">", texts)
-texts <- gsub("\\&lt\\;", "<", texts)
-texts <- gsub("\\&amp", "&", texts)
+texts <- gsub("\\&gt\\;", "", texts)
+texts <- gsub("\\&lt\\;", "", texts)
+texts <- gsub("\\&amp", "", texts)
 
 # IL NE FAUT PAS PRENDRE LES RTs PARCE QU'ILS SONT RACCOURCIS A 140 CARACTERES !!!
 
@@ -518,7 +562,7 @@ dev.off()
 ############################
 
 # Le nombre de tweets par heure et par jour
-jour.heure <- as.matrix(table(wday(crea), hour(crea)))[c(1,7:2),]
+jour.heure <- as.matrix(table(wday(crea), hour(crea)))[c(7,1:6),]
 
 # La palette de couleurs
 pal <- alpha("red", seq(0, .9, length = max(jour.heure)+1))
@@ -563,8 +607,6 @@ dev.off()
 ################################
 ### Écarts entre deux tweets ###
 ################################
-
-# work in progress
 
 # on classe les dates
 crea.temp <- crea[order(crea)]
