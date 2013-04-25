@@ -485,6 +485,9 @@ dev.off()
 ### Analyse temporelle ###
 ##########################
 
+# Watch out ! If it doesn't work from here, please read carefully the remark
+# at the beginning of the "Dates" paragraph.
+
 # Nombre de tweets par jour
 h <- hist(crea, breaks = "day", freq = TRUE, xaxt = "n", plot = FALSE)
 
