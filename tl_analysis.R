@@ -81,12 +81,6 @@ tw <- unlist(tw, recursive = FALSE)
 ### Dates ###
 #############
 
-# WATCH OUT !!!
-# At least valid on my Mac OS 10.6.8 with R 2.15.3 :
-# If strptime dosen't work, please use the following command to modify
-# the R environment in order to be compatible with Twitter dates format :
-# Sys.setlocale("LC_TIME", "C")						
-
 # Extracting dates
 
 crea.temp <- sapply(tw, function(x) x$created_at)
@@ -99,8 +93,11 @@ crea <- strptime(crea.temp, "%A %b %d %H:%M:%S %z %Y")
 # Thu Jan 31 23:27:08 +0000 2013
 # %A  %b  %d %H:%M:%S +%z   %Y
 
-# If the next command gives you multiple "NA", please read and follow the previous "WATCH OUT !!!" paragraph
+# If the next command gives you multiple "NA", it means that strptime dosen't work
+# therefore the command after will be executed and should solve the problem (at least on my Mac OS 10.6.8 with R 2.15.3)
+# it modifies the R environment in order to be compatible with Twitter dates format
 head(crea)
+if (sum(!is.na(crea)) == 0) Sys.setlocale("LC_TIME", "C")
 
 # Leaving your Twitter "tweets" folder and going back to your original working directory
 # This is were the graphical outputs will be saved
@@ -341,9 +338,9 @@ barplot(websites.Freq[tail(order(websites.Freq), 40)], horiz = TRUE, cex.names =
 abline(v=1:10*50, lty = 3)
 dev.off()
 
-###########################
-### Longueur des tweets ###
-###########################
+########################
+### Length of tweets ###
+########################
 
 # DEBUG : char[which.max(char)]
 texts <- sapply(tw, function(x) x$text)
@@ -418,9 +415,9 @@ legend("topleft", pch = c(20, 20, 20), col = c("blue", "red", "green"), legend =
 dev.off()
 
 
-########################################################################
-### Longueur des tweets de conversation (commençant par une mention) ###
-########################################################################
+#################################################
+### Length of tweets beginning with a mention ###
+#################################################
 
 # Ici les tweets de conversation (parfois la mention est précédée d'un point)
 char <- sapply(texts[(substr(texts, 1, 1) == "@") | (substr(texts, 2, 2) == "@")], nchar)			
