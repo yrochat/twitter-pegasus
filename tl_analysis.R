@@ -1,21 +1,47 @@
 # Titre 		:		tl_analysis.R
 # Author		:		Yannick Rochat, EPFL\CDH\DHLAB | UNIL\SSP\IMA
-# Date  		: 		2013/04/24
-# Description 	:		This script intends to describe and analyse tweets as received by Twitter's data retrieval own tool
+# Date  		: 		2013/05/17
+# Version		:		0.2
+# Description 		:		This script intends to describe and analyse tweets as received by Twitter's data retrieval own tool
 # License		:		GNU General Public License
 
-# To evaluate this script line after line :
+# How to cite	:		Yes, how do you cite this ?
+
+################
+### VERSIONS ###
+################
+
+# 0.2 Translation from french to english
+
+# 0.1 First version
+
+##########################
+### HOW DOES IT WORK ? ###
+##########################
+
+# TO EVALUATE THIS SCRIPT LINE AFTER LINE :
 # On Mac, bring the cursor on the line you want to evaluate, don't
-# select anything, then press (and keep) the "Apple touch" and press enter
-# If you have selected some text, this will be evaluated instead of
+# select anything, then press (and keep) the "Apple touch" and press enter.
+
+# If you have selected some text, it will be evaluated instead of
 # the single line.
+
+# If you want to evaluate the whole script, select it entirely,
+# press "Apple touch" + enter, and pray. This script is intended to work that way.
+
+# I try in the comments to explain what happens, at least the first a function is called
+# In case you wonder how something works, for example the rm function used a few lines below,
+# please use the command "?" (in our case : "?rm") to access its help file
+# If you're wondering how to do something but don't know how to, make a search with "??"
+# For example : "??remove"
+# If you find nothing or nothing relevant, then google it :-) 
 
 # Cleaning working space
 
 rm(list=ls())
 
 # Defining working directory. On mac, "~" is your home folder and
-# "folder1/folder2" means that "folder2" lies into "folder1"
+# "Desktop/Files" means that folder "Files" lies into "Desktop"
 # DON'T FORGET TO REPLACE MY OWN WORKING DIRECTORY BY YOURS
 # and to copy the Twitter folder "tweets" into it
 
@@ -31,291 +57,300 @@ setwd(paste(wd, "/tweets/data/js/tweets", sep=""))
 ############################
 
 # If you have never installed one of these packages, please first evaluate
-# the following line without the comment (= "#")
+# the 5 following lines but without the comment (= "#")
 
-# install.packages(c("rjson", "wordcloud", "tm", "lubridate", "scales"))
+# install.packages("rjson")
+# install.packages("wordcloud")
+# install.packages("tm")
+# install.packages("lubridate")
+# install.packages("scales")
 
-library(rjson)
-library(wordcloud)
-library(tm)
-library(lubridate)
-library(scales)
+library(rjson)			# deals with json format
+library(wordcloud)		# what could this be used for ?
+library(tm)				# text mining
+library(lubridate)		# nicest way to deal with dates
+library(scales)			# alternative color package
 
 
 ##########################
-### Loading the tweets ###
+### LOADING THE TWEETS ###
 ##########################
 
 # List all .js files
-
 lf <- list.files()
 
 # Reading these .js files.
 # Please ignore the warnings, they are caused by the 
 # absence of a line break at the end of each document
-
 tw <- sapply(lf, readLines)
 
 # Cleaning names
-
 names(tw) <- NULL
 
 # Deleting first "parasite" line
-
 tw <- sapply(tw, function(x) x[-1])
 
 # Suppressing line breaks
-
 tw <- sapply(tw, paste, collapse=" ")
 
 # Converting from JSON to an R list
-
 tw <- lapply(tw, fromJSON)			
 
 # Suppressing month breaks
-
 tw <- unlist(tw, recursive = FALSE)
 
 
 #############
-### Dates ###
+### DATES ###
 #############
 
 # Extracting dates
-
 crea.temp <- sapply(tw, function(x) x$created_at)
 
 # Converting dates from characters to POSIX
-
 crea <- strptime(crea.temp, "%A %b %d %H:%M:%S %z %Y")
+
+# At least valid on my Mac OS 10.6.8 with R 2.15.3 :
+# If previous strptime command doesn't work, the following command  will automatically
+# modify the R environment in order to be compatible with Twitter dates format :
+
+if (any(is.na(crea))) {
+	Sys.setlocale("LC_TIME", "C")						
+	crea <- strptime(crea.temp, "%A %b %d %H:%M:%S %z %Y")
+}
 
 # Example
 # Thu Jan 31 23:27:08 +0000 2013
 # %A  %b  %d %H:%M:%S +%z   %Y
 
-# If the next command gives you multiple "NA", it means that strptime dosen't work
-# therefore the command after will be executed and should solve the problem (at least on my Mac OS 10.6.8 with R 2.15.3)
-# it modifies the R environment in order to be compatible with Twitter dates format
-head(crea)
-if (sum(!is.na(crea)) == 0) Sys.setlocale("LC_TIME", "C")
-
 # Leaving your Twitter "tweets" folder and going back to your original working directory
 # This is were the graphical outputs will be saved
-
 setwd(wd)
 
 
-##########################
-### Analysis & visuals ###
-##########################
+########################
+### NUMBER OF TWEETS ###
+########################
 
-# Preview of tweets and retweets metadata
-
-head(tw)
+# If you want to preview your tweets and retweets metadata ,
+# evaluate without the comment (#)
+# head(tw)
 
 # Total number of tweets
-
 length(tw)
 
 # Number of tweets per day computed like that :
 # Number of tweets / (last tweet date - oldest tweet date)
-
 difft <- as.numeric(tail(crea,1) - head(crea,1))				
 length(tw) / difft
 
 
 ################
-### Retweets ###
+### RETWEETS ###
 ################
 
 # Returns empty list or retweet itself
-
 RT <- lapply(tw, function(x) x$retweeted_status)
 
 # Either TRUE if it is a retweet, or FALSE if it isn't
-
 RT.status <- !sapply(RT, is.null)			
 
-# Preview of 100 first tweets
-
-head(RT.status,100)
-
 # Number of TRUE's, i.e. numbre of retweets
-
 sum(RT.status)
 
 # Proportion of RTs
-
 sum(RT.status) / length(RT.status)
 
 # Who you retweet
-
 RT.id <- sapply(tw[RT.status], function(x) x$retweeted_status$user$screen_name)
 
 # Frequency of who you retweet
-
 RT.id.df <- as.data.frame(table(RT.id), stringsAsFactors = FALSE)
-head(RT.id.df, 10)
 
 # Frequency of who you retweet, ordered
-
 RT.Freq <- RT.id.df$Freq
 names(RT.Freq) <- RT.id.df$RT.id
-tail(RT.Freq[order(RT.Freq)], 40)
 
 # And visualised
-
 pdf("RT_people.pdf", width=1200/72, height=1200/72)
-par(mar=c(5,12,4,2))
-barplot(RT.Freq[tail(order(RT.Freq), 39)], horiz = TRUE, cex.names = 1, las = 2, main = "Noms des utilisateurs retweetés", cex.main = 3, cex.axis = 2)
+	par(mar=c(5,12,4,2))							# margins
+	barplot(RT.Freq[tail(order(RT.Freq), 39)], 		# data
+			horiz = TRUE, 							# graph orientation
+			las = 2, 								# names orientation
+			main = "Name of retweeted users", 		# title
+			cex.main = 3, 							# title size
+			cex.axis = 2)							# labels size
 abline(v=1:20*10, lty = 3)
 dev.off()
 
-### TO BE TRADUCTED FROM HERE
 
 ################
-### Mentions ###
+### MENTIONS ###
 ################
 
-# Rappel : en travaillant sur tw, on travaille sur tweets et retweets
-
-# Nombre de mentions contenues dans chaque tweet
+# Number of mentions appearing in each tweet
 mentions <- sapply(tw, function(x) length(x$entities$user_mentions))
-head(mentions,100)
 
-# La distribution des mentions
+# Distribution of mentions
 mentions.df <- as.data.frame(table(mentions), stringsAsFactors = FALSE)
-mentions.df
 
-# Tous les IDs (on retire les retweets avec intersect !)
+# All IDs mentioned (not unique & retweets are omitted via the intersect command)
 mentions.id <- unlist(sapply(tw[intersect(which(!RT.status), which(mentions != 0))], function(x) sapply(x$entities$user_mentions, function(y) y$id)))
-head(mentions.id,100)
 
-# La fréquence de chaque ID
+# ID frequencies
 mentions.id.df <- as.data.frame(table(mentions.id), stringsAsFactors = FALSE)
-head(mentions.id.df, 10)
 
-# Nombre de mentions par tweet
-pdf("mentions_par_tweet.pdf")
-plot(mentions.df, pch=20, log="y", xlab="Mentions", ylab="Tweets", main = "Nombre de mentions par tweet")
-legend("topright", bty = "n", legend = paste(sum(mentions.df[-1,]$Freq), " tweets contiennent\nau moins une mention", sep=""))
-grid()
+# Number of mentions per tweet
+pdf("mentions_per_tweet.pdf")
+	barplot(	table(mentions), 									# data
+				pch=20, 											# choice of symbol
+				log="y", 											# log scale on y-axis
+				xlab="Mentions", 
+				ylab="Tweets", 
+				main = "Number of mentions per tweet")
+	legend(	"topright", 											# legend position
+			bty = "n", 												# legend frame
+			legend = paste(sum(mentions > 0), " tweets,\ncontaining at least\none mention,\n", sum(mentions), " mentions\nin total.", sep=""))
+	abline(	h = 10^(1:round(log10(max(table(mentions))),0)), 		# plot horizontal lines
+			lty = "dotted", 
+			col = "lightgray")
+	abline(	h = 5*10^(0:(round(log10(max(table(mentions))),0)-1)), 
+			lty = "dotted", 
+			col = "lightgray")
 dev.off()
 
-# Proportion de tweets avec au moins une mention
+# Proportion of tweets with at least one mention
 sum(mentions.df[-1,]$Freq / length(tw))
 
-# Le tweet avec le maximum de mentions
+# The tweet(s?) with the maximum number of mentions
 tw[[which.max(mentions)]]$text
 
-# Nombre de mentions uniques
+# Number of unique mentions (people mentioned at least once)
 length(unique(mentions.id))
 
-# Proportion de mentions uniques
+# Proportion of unique mentions to total number of mentions
 length(unique(mentions.id)) / length(mentions.id)
 
-# Nombre de mentions uniques par nombre de tweets
+# Number of unique mentions per number of tweets
 length(unique(mentions.id)) / length(tw)
 
-# Distribution des mentions
+# Distribution of mentions
 mentions.id.hist <- hist(mentions.id.df$Freq, breaks = seq(min(mentions.id.df$Freq), max(mentions.id.df$Freq)+1, 1), plot = FALSE)
-pdf("mentions_utilisateurs.pdf")
-plot(head(mentions.id.hist$breaks, -1), mentions.id.hist$counts, pch = 20, xlab = "Mentions", ylab = "Utilisateurs", main = "Nombre de mentions des utilisateurs", log="xy")
-grid()
-legend("topright", bty = "n", legend = paste("n = ", sum(mentions.id.df$Freq), sep=""))
+
+# Let's plot it
+pdf("mentions_users.pdf")
+	plot(	head(mentions.id.hist$breaks, -1), 		
+			mentions.id.hist$counts, pch = 20, 
+			xlab = "Mentions", 
+			ylab = "Users", 
+			main = "Distribution of mentions per user", log="xy")
+	grid()
+	legend(	"topright", 
+			bty = "n", 
+			legend = paste(sum(mentions.id.hist$counts), " users\nwere mentioned\n", sum(mentions.id.df$Freq), " times\nin total.", sep=""))
 dev.off()
 
-# En faisant le même exercice avec les noms plutôt que les IDs, on arrive aux mêmes résultats
-# Bizarrement, les comptes dont le nom d'utilisateur
-
-# Extraction des user names
+# Extracting usernames
 mentions.screen_name <- unlist(sapply(tw[intersect(which(!RT.status), which(mentions != 0))], function(x) sapply(x$entities$user_mentions, function(y) y$screen_name)))
 
-# Fréquence de chaque user name
+# Frequency of each user name
 mentions.screen_name.df <- as.data.frame(table(mentions.screen_name), stringsAsFactors = FALSE)
 
-# Classement par ordre croissant
+# 20 most cited
 tail(mentions.screen_name.df[order(mentions.screen_name.df$Freq),], 20)
 
-# Attention ! Ça donne le même résultat que 
-# mentions.id.df[order(mentions.id.df$Freq),]
-# ce qui prouve que Twitter n'aurait pas mis à jour les comptes aux noms modifiés !?!? Bizarre … À qui appartiennent ces IDs alors ?
+# Note : we obtain with mentions.screen_name.df (at least it appears to be my case)
+# the same results as mentions.id.df[order(mentions.id.df$Freq),]
+identical(sort(mentions.screen_name.df$Freq), mentions.id.df[order(mentions.id.df$Freq),]$Freq)
+
 
 ################
-### Hashtags ###
+### HASHTAGS ###
 ################
 
-# Rappel : en travaillant sur tw, on travaille sur tweets et retweets
-
-# Nombre de hashtags par tweet
+# Number of hashtags per tweet
 hashtags <- sapply(tw, function(x) length(x$entities$hashtags))
-head(hashtags, 100)
 
-# Distribution du nombre de hashtags par tweet
+# Distribution of number of hashtags per tweet
 hashtags.df <- as.data.frame(table(hashtags), stringsAsFactors = FALSE)
 
-# Récupération des hashtags
-hashtags.id <- unlist(sapply(tw[which(hashtags != 0)], function(x) sapply(x$entities$hashtags, function(y) y$text)))
-head(hashtags.id, 100)
-
-# Fréquence de chaque hashtag
-hashtags.id.df <- as.data.frame(table(tolower(hashtags.id)), stringsAsFactors = FALSE)
-head(hashtags.id.df, 100)
-
-# Nombre total de hashtags
-length(hashtags.id)
-
-# Nombre de hashtags uniques
-length(tolower(unique(hashtags.id)))
-
-# Nombre de hashtags par tweet
-pdf("hashtags_par_tweet.pdf")
-plot(hashtags.df, pch=20, log="xy", xlab="Hashtags", ylab="Tweets", main = "Nombre de hashtags par tweet")
-grid()
-legend("topright", bty = "n", legend = c(
-	paste("#hashtags = ", sum(as.numeric(hashtags.df[,1]) * hashtags.df[,2]), "\n", sep=""), 
-	paste("#tweets = ", sum(hashtags.df[-1,2]), "\n", sep=""),
-	paste(hashtags.df[1,2], " tweets ne contiennent\npas de hashtag", sep="")))
-dev.off()
-
-# Le tweet avec le maximum de hashtags
+# The tweet containing the maximum of hashtags (my best score is 20, yours ?)
 tw[[which.max(hashtags)]]$text
 
-# Distribution des hashtags
-hashtags.id.hist <- hist(hashtags.id.df$Freq, breaks = seq(min(hashtags.id.df$Freq), max(hashtags.id.df$Freq)+1, 1), plot = FALSE)
-pdf("hashtags_dist.pdf")
-plot(head(hashtags.id.hist$breaks, -1), hashtags.id.hist$counts, pch = 20, ylab = "Nombre de hashtags", xlab = "Nombre d'apparitions", main = "Nombre d'apparitions de chaque hashtag", log="xy")
-grid()
-legend("topright", bty = "n", legend = c(
-	paste("#hashtags uniques = ", nrow(hashtags.id.df), "\n", sep=""), 
-	paste("Nombre total de tweets = ", length(tw), sep="")))
+# Getting the hashtags
+hashtags.id <- unlist(sapply(tw[which(hashtags != 0)], function(x) sapply(x$entities$hashtags, function(y) y$text)))
+
+# Frequency of each hashtag
+hashtags.id.df <- as.data.frame(table(tolower(hashtags.id)), stringsAsFactors = FALSE)
+
+# Total number of hashtags
+length(hashtags.id)
+
+# Total number of unique hashtags
+length(tolower(unique(hashtags.id)))
+
+# Number of hashtags per tweet
+pdf("hashtags_per_tweet.pdf")
+	plot(	hashtags.df, 
+			pch=20, 
+			log="xy", 				# log scales on x- & y-axis
+			xlab="Hashtags", 
+			ylab="Tweets", 
+			main = "Number of hashtags per tweet")
+	for(i in 1:9) abline(h = i*10^(0:7), col = "lightgray", lty = "dotted")		# 7 (= 10'000'000 tweets) should suffice
+	for(i in 1:9) abline(v = i*10^(0:7), col = "lightgray", lty = "dotted")
+	legend("topright", bty = "n", legend = c(
+		paste("#hashtags = ", sum(as.numeric(hashtags.df[,1]) * hashtags.df[,2]), "\n", sep=""), 	
+		paste("#tweets = ", sum(hashtags.df[-1,2]), "\n", sep=""),
+		paste(hashtags.df[1,2], " tweets\ndon't own\na single\nhashtag", sep="")))
 dev.off()
 
-# Distribution des hashtags avec le détail
+# Distribution of hashtags
+hashtags.id.hist <- hist(hashtags.id.df$Freq, breaks = seq(min(hashtags.id.df$Freq), max(hashtags.id.df$Freq)+1, 1), plot = FALSE)
+
+# histogram
+pdf("hashtags_dist.pdf")
+	plot(	head(hashtags.id.hist$breaks, -1), 
+			hashtags.id.hist$counts, 
+			pch = 20, 
+			ylab = "Number of hashtags", 
+			xlab = "Number of apparitions", 
+			main = "Number of apparitions for each hashtag", 
+			log="xy")
+	for(i in 1:9) abline(h = i*10^(0:7), col = "lightgray", lty = "dotted")
+	for(i in 1:9) abline(v = i*10^(0:7), col = "lightgray", lty = "dotted")
+	legend("topright", bty = "n", legend = c(
+		paste("#hashtags uniques = ", nrow(hashtags.id.df), "\n", sep=""), 
+		paste("Total number of tweets = ", length(tw), sep="")))
+dev.off()
+
+# 20 used hashtags the most
 tail(hashtags.id.df[order(hashtags.id.df$Freq),], 20)
 
-# Wordcloud pour visualiser la distribution des hashtags
-# scale détermine les tailles du plus grand et du plus petit
-# min.freq est un seuil à atteindre pour pouvoir apparaître dans le wordcloud
+# Wordcloud of hashtags depending on frequency
+# scale argument decides the sizes of most and least frequent hashtags
+# min.freq is the minimum frequency a hashtag has to reach
 pdf("wordcloud.pdf")
 wordcloud(hashtags.id, scale=c(4,1.5), min.freq = 10)
 dev.off()
+
 
 ############
 ### URLs ###
 ############
 
-# Nombre d'URLs
+# Distribution of urls
 urls <- sapply(tw, function(x) length(x$entities$urls))
 urls.df <- as.data.frame(table(urls), stringsAsFactors = FALSE)
 urls.df
 
-# Proportions de tweets avec des URLs
+# Proportion of tweets containing at least one URL
 sum(urls.df$Freq[-1]) / sum(urls.df$Freq)
 
+# various URLs (entire name)
 urls.id <- unlist(sapply(tw[which(urls != 0)], function(x) sapply(x$entities$urls, function(y) y$expanded_url)))
 
-# fonction donnée dans example(grep)
+# Function taken from example(grep). It isolates domain name.
 URL_parts <- function(x) {
      m <- regexec("^(([^:]+)://)?([^:/]+)(:([0-9]+))?(/.*)", x)
      parts <- do.call(rbind,
@@ -324,100 +359,163 @@ URL_parts <- function(x) {
      parts
 }
 
-# Les sites que je mentionne ou retweete
-websites <- as.data.frame(URL_parts(urls.id), stringsAsFactors = FALSE)$host
-websites.df <- as.data.frame(table(websites), stringsAsFactors = FALSE)
+# Sites in my tweets (all : mentionned or retweeted)
+websites <- as.data.frame(URL_parts(urls.id), stringsAsFactors = FALSE)$host	# Some NAs !?
+websites.df <- as.data.frame(table(websites), stringsAsFactors = FALSE)			# frequency of each domain
 websites.Freq <- websites.df$Freq
 names(websites.Freq) <- websites.df$websites
-tail(websites.Freq[order(websites.Freq)], 40)
+tail(websites.Freq[order(websites.Freq)], 40)									# 40 most frequent URLs
 
-# On représente ici les sites plus cités (sic!)
-pdf("sites_web.pdf", width=1200/72, height=1200/72)
-par(mar=c(5,12,4,2))
-barplot(websites.Freq[tail(order(websites.Freq), 40)], horiz = TRUE, cex.names = 1, las = 2, main = "Noms de domaine des URLs cités", cex.main = 3, cex.axis = 2)
-abline(v=1:10*50, lty = 3)
+# We visualize the most cited urls
+pdf("sites_web.pdf", width=1200/72, height=1200/72)		# 1200 pixels, has to be in inches, there's 72 pix / inch
+	par(mar=c(5,12,4,2))
+	barplot(	websites.Freq[tail(order(websites.Freq), 40)], 
+				horiz = TRUE, 
+				cex.names = 1, 
+				las = 2, 
+				main = "Domain name of cited urls", 
+				cex.main = 3, 
+				cex.axis = 2)
+	abline(v=1:10*50, lty = 3)
 dev.off()
 
+
 ########################
-### Length of tweets ###
+### LENGTH OF TWEETS ###
 ########################
 
-# DEBUG : char[which.max(char)]
+# Extracting the texts
 texts <- sapply(tw, function(x) x$text)
-head(texts)
 
-# Il faut enlever quelques caractères problématiques
+# clean problematic characters, for example < and >
 texts <- gsub("\\&gt\\;", "", texts)
 texts <- gsub("\\&lt\\;", "", texts)
 texts <- gsub("\\&amp", "", texts)
 
-# IL NE FAUT PAS PRENDRE LES RTs PARCE QU'ILS SONT RACCOURCIS A 140 CARACTERES !!!
+# In this §, we don't deal with RTs : they are shortened to 140 characters, 
+# therefore some information is missing. But we deal with "RT & edit"'s.
+# It is possible to extract the original tweet. Anyway, this would logically 
+# have to be done in a new §
+# Since all retweets begin with RT (you don't send it on the website, 
+# but it's how it's saved), we omit them via "!substr(texts, 1, 2) == "RT""
+# you can test this :
+# texts[substr(texts, 1, 2) == "RT"]
 
-# Le nombre de caractères de tous les tweets sauf les purs RT
-char <- sapply(texts[!substr(texts, 1, 2) == "RT"], nchar)
-head(char)
+# Let's classify tweets, RTs & "RT & edit"
+classif.RT <- data.frame(	text = texts,																						# texts
+							no = !grepl("RT", texts) | (grepl("RT", texts) & !grepl("RT ", texts)),								# no RT with exception for stuff like "RTS" or "CONCERT" etc.
+							RT = !sapply(tw, function(x) is.null(x$retweeted_status)),											# pure RT
+							plzRT = grepl("please RT|plz RT|RT please", texts),													# "please RT" 
+							RTedit = grepl("MT @|RT @|MT@|RT@", texts) & sapply(tw, function(x) is.null(x$retweeted_status)), 	# contains MT or RT, is not a pure RT, is not a "please RT"
+							stringsAsFactors=FALSE 																				# stringsAsFactors will save your life
+)
 
-# Distribution du nombre de caractères
+# Number of characters in all the tweets except pure RTs
+char <- sapply(classif.RT$text[classif.RT$RT == FALSE], nchar)
+
+# It shouldn't appear here. Anyway, let's extract original text from retweets
+# and compute number of characters in these foreign texts
+RT.text <- sapply(tw, function(x) x$retweeted_status$text)
+RT.text.null <- !sapply(rt.text, is.null)
+RT.text <- do.call("c", rt.text[rt.text.null])
+
+RT.text <- gsub("\\&gt\\;", "", RT.text)
+RT.text <- gsub("\\&lt\\;", "", RT.text)
+RT.text <- gsub("\\&amp", "", RT.text)
+
+RT.char <- sapply(RT.text, nchar)
+
+# Number of characters of edited RTs
+char2 <- sapply(classif.RT$text[classif.RT$RTedit == TRUE], nchar)
+
+# Distribution of number of characters composing each tweet except pure RTs
 char.df <- as.data.frame(table(char), stringsAsFactors = FALSE)
 char.df$char <- as.numeric(char.df$char)
 
-# Le nombre de caractères de tous les tweets sauf les purs RT et les RTs manuels 
-# (et peut-être quelques tweets malheureux du type "please RT")
-char2 <- sapply(texts[-grep("RT ",texts)], nchar)
-head(char2)
+# Distribution of number of characters composing pure RTs
+RT.char.df <- as.data.frame(table(RT.char), stringsAsFactors = FALSE)
+RT.char.df$char <- as.numeric(RT.char.df$RT.char)
 
-# Distribution du nombre de caractères
+# Distribution of number of characters composing edited RTs
 char2.df <- as.data.frame(table(char2), stringsAsFactors = FALSE)
 char2.df$char2 <- as.numeric(char2.df$char2)
 
-# Le nombre de caractères de tous les RTs manuels (on exclut ceux qui commencent par "RT")
-# (et peut-être quelques tweets malheureux du type "please RT" par contre attention à RTS => "RT ")
-char3 <- sapply(texts[intersect(which(!substr(texts,1,2)=="RT"), grep("RT ", texts))], nchar)
-head(char3)
-
-# Distribution du nombre de caractères
-char3.df <- as.data.frame(table(char3), stringsAsFactors = FALSE)
-char3.df$char3 <- as.numeric(char3.df$char3)
-
-# On plot les 3 cas dans un même graphe
+# Let's plot on the same graph 3 distribution (see legend)
 pdf("nchar.pdf")
-plot(char.df, pch = 20, col = "blue", xlab="Nombre de caractères", ylab="Nombre de tweets", main = "Nombre de tweets (sans RTs classiques)\nen fonction du nombre de caractères", cex = .6)
-grid()
-points(char2.df, pch = 20, col = "red", cex = .6)
-points(char3.df, pch = 20, col = "green", cex = .6)
-# on rajoute des splines pour saisir la tendance dans les nuages de points
-lines(smooth.spline(char.df$char, char.df$Freq, df = 10))
-lines(smooth.spline(char2.df$char2, char2.df$Freq, df = 10))
-lines(smooth.spline(char3.df$char3, char3.df$Freq, df = 10))
-legend("topleft", pch = c(20, 20, 20), col = c("blue", "red", "green"), legend = c(paste("avec RTs manuels, n = ", sum(char.df$Freq), sep=""), paste("sans RTs manuels, n = ", sum(char2.df$Freq) , sep=""), paste("juste les RTs manuels, n = ", sum(char3.df$Freq) , sep="")))
+	plot(	char.df, 
+			pch = 20, 
+			col = "blue", 
+			xlab="Characters", 
+			ylab="Tweets", 
+			main = "Distribution of tweets\nvs. number of characters", 
+			cex = .6)
+	grid()
+	points(	RT.char.df, 
+			pch = 20, 
+			col = "red", 
+			cex = .6)
+	points(	char2.df, 
+			pch = 20, 
+			col = "green", 
+			cex = .6)
+# splines help seeing the tendancy
+	lines(smooth.spline(char.df$char, char.df$Freq, df = 10))
+	lines(smooth.spline(char2.df$char2, char2.df$Freq, df = 10))
+	lines(smooth.spline(RT.char.df$RT.char, RT.char.df$Freq, df = 10))
+	legend(	"topleft", 
+			pch = c(20, 20, 20), 
+			col = c("blue", "red", "green"), 
+			legend = c(paste("Tweets without classic RTs, n = ", sum(char.df$Freq), sep=""), paste("Retweets, n = ", sum(RT.char.df$Freq) , sep=""), paste("Edited retweets, n = ", sum(char2.df$Freq) , sep="")))
 dev.off()
 
-# On plot les 3 cas dans un même graphe
-# Mais cette fois c'est relatif !
-
+# Relative case
 char.rel.df <- char.df
-char2.rel.df <- char2.df
-char3.rel.df <- char3.df
 char.rel.df$Freq <- char.df$Freq / sum(char.df$Freq)
-char2.rel.df$Freq <- char2.df$Freq / sum(char2.df$Freq)
-char3.rel.df$Freq <- char3.df$Freq / sum(char3.df$Freq)
 
+RT.char.rel.df <- RT.char.df
+RT.char.rel.df$Freq <- RT.char.df$Freq / sum(RT.char.df$Freq)
+
+char2.rel.df <- char2.df
+char2.rel.df$Freq <- char2.df$Freq / sum(char2.df$Freq)
+
+#graph
 pdf("nchar_rel.pdf")
-plot(char.rel.df, pch = 20, col = "blue", xlab="Nombre de caractères", ylab="Proportion de tweets", main = "Distribution du nombre de tweets (sans RTs classiques)\nen fonction du nombre de caractères", cex = .6, ylim = c(0,max(char3.rel.df$Freq)))
-grid()
-points(char2.rel.df, pch = 20, col = "red", cex = .6)
-points(char3.rel.df, pch = 20, col = "green", cex = .6)
-# on rajoute des splines pour saisir la tendance dans les nuages de points
-lines(smooth.spline(char.rel.df$char, char.rel.df$Freq, df = 10))
-lines(smooth.spline(char2.rel.df$char2, char2.rel.df$Freq, df = 10))
-lines(smooth.spline(char3.rel.df$char3, char3.rel.df$Freq, df = 10))
-legend("topleft", pch = c(20, 20, 20), col = c("blue", "red", "green"), legend = c(paste("avec RTs manuels, n = ", sum(char.df$Freq), sep=""), paste("sans RTs manuels, n = ", sum(char2.df$Freq) , sep=""), paste("juste les RTs manuels, n = ", sum(char3.df$Freq) , sep="")))
+	plot(	char.rel.df, 
+			pch = 20, 
+			col = "blue", 
+			xlab="Characters", 
+			ylab="Frequency", 
+			main = "Distribution of tweets\nto number of characters", 
+			cex = .6, 
+			ylim = c(0,max(char.rel.df$Freq, char2.rel.df$Freq, RT.char.rel.df$Freq)))
+	grid()
+	points(	RT.char.rel.df, 
+			pch = 20, 
+			col = "red", 
+			cex = .6)
+	points(	char2.rel.df, 
+			pch = 20, 
+			col = "green", 
+			cex = .6)
+	# splines
+	lines(smooth.spline(char.rel.df$char, char.rel.df$Freq, df = 10))
+	lines(smooth.spline(RT.char.rel.df$RT.char, RT.char.rel.df$Freq, df = 10))
+	lines(smooth.spline(char2.rel.df$char2, char2.rel.df$Freq, df = 10))
+	legend(	"topleft", 
+			pch = c(20, 20, 20), 
+			col = c("blue", "red", "green"), 
+			legend = c(paste("Tweets without classic RTs, n = ", sum(char.df$Freq), sep=""), paste("Retweets, n = ", sum(RT.char.df$Freq) , sep=""), paste("Edited retweets, n = ", sum(char2.df$Freq) , sep="")))
 dev.off()
 
 
-#################################################
-### Length of tweets beginning with a mention ###
-#################################################
+
+### TO BE TRANSLATED FROM HERE
+
+
+
+########################################################################
+### Longueur des tweets de conversation (commençant par une mention) ###
+########################################################################
 
 # Ici les tweets de conversation (parfois la mention est précédée d'un point)
 char <- sapply(texts[(substr(texts, 1, 1) == "@") | (substr(texts, 2, 2) == "@")], nchar)			
