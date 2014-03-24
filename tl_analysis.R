@@ -1,8 +1,8 @@
 # Titre 		:		tl_analysis.R
 # Author		:		Yannick Rochat, EPFL\CDH\DHLAB | UNIL\SSP\IMA
-# Date  		: 		2013/05/17
-# Version		:		0.2
-# Description 		:		This script intends to describe and analyse tweets as received by Twitter's data retrieval own tool
+# Date  		: 		2014/03/24
+# Version		:		0.3
+# Description 	:		This script intends to describe and analyse tweets as received by Twitter's data retrieval own tool
 # License		:		GNU General Public License
 
 # How to cite	:		Yes, how do you cite this ?
@@ -11,7 +11,9 @@
 ### VERSIONS ###
 ################
 
-# 0.2 Translation from french to english
+# 0.3 Dates
+
+# 0.2 Translation from french to english (unfinished)
 
 # 0.1 First version
 
@@ -45,7 +47,7 @@ rm(list=ls())
 # DON'T FORGET TO REPLACE MY OWN WORKING DIRECTORY BY YOURS
 # and to copy the Twitter folder "tweets" into it
 
-wd <- "~/Dropbox/Pegasus/2013_03_27_TwitterDataRetrieval"
+wd <- "~/Dropbox/Pegasus/20140324_TwitterDataRetrieval"
 
 # Entering your Twitter "tweets" folder
 
@@ -107,21 +109,8 @@ tw <- unlist(tw, recursive = FALSE)
 # Extracting dates
 crea.temp <- sapply(tw, function(x) x$created_at)
 
-# Converting dates from characters to POSIX
-crea <- strptime(crea.temp, "%A %b %d %H:%M:%S %z %Y")
-
-# At least valid on my Mac OS 10.6.8 with R 2.15.3 :
-# If previous strptime command doesn't work, the following command  will automatically
-# modify the R environment in order to be compatible with Twitter dates format :
-
-if (any(is.na(crea))) {
-	Sys.setlocale("LC_TIME", "C")						
-	crea <- strptime(crea.temp, "%A %b %d %H:%M:%S %z %Y")
-}
-
-# Example
-# Thu Jan 31 23:27:08 +0000 2013
-# %A  %b  %d %H:%M:%S +%z   %Y
+# Converting dates from characters to POSIX # example : "2013-09-02 15:42:33 +0000"
+crea <- strptime(crea.temp, "%Y-%m-%d %H:%M:%S %z")
 
 # Leaving your Twitter "tweets" folder and going back to your original working directory
 # This is were the graphical outputs will be saved
@@ -416,8 +405,8 @@ char <- sapply(classif.RT$text[classif.RT$RT == FALSE], nchar)
 # It shouldn't appear here. Anyway, let's extract original text from retweets
 # and compute number of characters in these foreign texts
 RT.text <- sapply(tw, function(x) x$retweeted_status$text)
-RT.text.null <- !sapply(rt.text, is.null)
-RT.text <- do.call("c", rt.text[rt.text.null])
+RT.text.null <- !sapply(RT.text, is.null)
+RT.text <- do.call("c", RT.text[RT.text.null])
 
 RT.text <- gsub("\\&gt\\;", "", RT.text)
 RT.text <- gsub("\\&lt\\;", "", RT.text)
