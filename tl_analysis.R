@@ -1,15 +1,17 @@
-# Titre 		:		tl_analysis.R
-# Author		:		Yannick Rochat, EPFL\CDH\DHLAB | UNIL\SSP\IMA
-# Date  		: 		2014/03/24
-# Version		:		0.3
-# Description 	:		This script intends to describe and analyse tweets as received by Twitter's data retrieval own tool
-# License		:		GNU General Public License
+# Titre          tl_analysis.R
+# Author         Yannick Rochat, UNIL\LETTRES\ISH | EPFL\CDH\DHLAB | UNIL\SSP\IMA
+# Date           2016/09/12
+# Version        0.4
+# Description    This script intends to describe and analyse tweets as received by Twitter's data retrieval own tool
+# License        GNU General Public License
 
-# How to cite	:		Yes, how do you cite this ?
+# How to cite    ...
 
 ################
 ### VERSIONS ###
 ################
+
+# 0.4 Compatibility with R and Twiter archive format
 
 # 0.3 Dates
 
@@ -20,6 +22,10 @@
 ##########################
 ### HOW DOES IT WORK ? ###
 ##########################
+
+# BEGINNER Open this script inside your Twitter archive 
+# EXPERT Manually choose your Twitter archive as working directory
+# (e.g. drag and drop it on the R logo)
 
 # TO EVALUATE THIS SCRIPT LINE AFTER LINE :
 # On Mac, bring the cursor on the line you want to evaluate, don't
@@ -47,11 +53,11 @@ rm(list=ls())
 # DON'T FORGET TO REPLACE MY OWN WORKING DIRECTORY BY YOURS
 # and to copy the Twitter folder "tweets" into it
 
-wd <- "~/Dropbox/Pegasus/20140324_TwitterDataRetrieval"
+wd <- getwd()
 
 # Entering your Twitter "tweets" folder
 
-setwd(paste(wd, "/tweets/data/js/tweets", sep=""))
+setwd(paste(wd, "/data/js/tweets", sep=""))
 
 
 ############################
@@ -67,11 +73,10 @@ setwd(paste(wd, "/tweets/data/js/tweets", sep=""))
 # install.packages("lubridate")
 # install.packages("scales")
 
-library(rjson)			# deals with json format
-library(wordcloud)		# what could this be used for ?
-library(tm)				# text mining
-library(lubridate)		# nicest way to deal with dates
-library(scales)			# alternative color package
+require(rjson)			# deals with json format
+require(tm)				# text mining
+require(lubridate)		# nicest way to deal with dates
+require(scales)			# alternative color package
 
 
 ##########################
@@ -82,9 +87,7 @@ library(scales)			# alternative color package
 lf <- list.files()
 
 # Reading these .js files.
-# Please ignore the warnings, they are caused by the 
-# absence of a line break at the end of each document
-tw <- sapply(lf, readLines)
+tw <- sapply(lf, readLines, warn = FALSE)
 
 # Cleaning names
 names(tw) <- NULL
@@ -131,7 +134,9 @@ length(tw)
 # Number of tweets per day computed like that :
 # Number of tweets / (last tweet date - oldest tweet date)
 difft <- as.numeric(tail(crea,1) - head(crea,1))				
-length(tw) / difft
+
+cat("You have sent", length(tw) / difft, "tweets per day over", difft/365, "years.")
+
 
 
 ################
@@ -145,10 +150,10 @@ RT <- lapply(tw, function(x) x$retweeted_status)
 RT.status <- !sapply(RT, is.null)			
 
 # Number of TRUE's, i.e. numbre of retweets
-sum(RT.status)
+cat("Among your", length(tw), "tweets, there were", sum(RT.status), "retweets.")
 
 # Proportion of RTs
-sum(RT.status) / length(RT.status)
+cat("This is", sum(RT.status) / length(RT.status), "% of your corpus.")
 
 # Who you retweet
 RT.id <- sapply(tw[RT.status], function(x) x$retweeted_status$user$screen_name)
@@ -172,6 +177,7 @@ pdf("RT_people.pdf", width=1200/72, height=1200/72)
 abline(v=1:20*10, lty = 3)
 dev.off()
 
+cat("Le compte que vous avez le plus retweeté est", names(RT.Freq[tail(order(RT.Freq), 1)]))
 
 ################
 ### MENTIONS ###
@@ -315,13 +321,6 @@ dev.off()
 
 # 20 used hashtags the most
 tail(hashtags.id.df[order(hashtags.id.df$Freq),], 20)
-
-# Wordcloud of hashtags depending on frequency
-# scale argument decides the sizes of most and least frequent hashtags
-# min.freq is the minimum frequency a hashtag has to reach
-pdf("wordcloud.pdf")
-wordcloud(hashtags.id, scale=c(4,1.5), min.freq = 10)
-dev.off()
 
 
 ############
